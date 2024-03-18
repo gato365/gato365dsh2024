@@ -1,0 +1,203 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+
+
+### NBA Players Data Scraping
+
+
+
+```{r setup}
+library(rvest)
+library(dplyr)
+library(stringr)
+library(purrr)
+library(tidyr)
+
+```
+
+```{r}
+# Custom function to safely convert character to numeric
+safe_convert_to_numeric <- function(x) {
+  # Attempt to convert, but return original character vector if it fails
+  converted <- suppressWarnings(as.numeric(x))
+  # If conversion results in all NAs (and there were not all NAs to begin with), return original
+  if (all(is.na(converted)) && !all(is.na(x))) {
+    return(x)
+  } else {
+    return(converted)
+  }
+}
+
+```
+
+
+```{r}
+# Set the years for which you want to scrape data
+years <- 2019:2023
+
+# Initialize an empty list to store the data frames for each year
+nba_players_stats_list <- list()
+
+# Loop over the years
+for(year in years) {
+  # Set the URL for the NBA year's statistics page
+  url_nba <- paste0("https://www.basketball-reference.com/leagues/NBA_", year, "_per_game.html")
+  
+  # Read the HTML content of the webpage
+  webpage_nba <- read_html(url_nba)
+  
+  # Extract the player statistics table and add the year column
+  nba_players_stats_df <- html_node(webpage_nba, "table") %>%
+    html_table() %>% 
+    mutate(year = year) %>%
+    filter(Player != "Player") %>%  
+    mutate(across(where(is.character), ~safe_convert_to_numeric(.x)))
+  
+  colnames(nba_players_stats_df) <- c(
+    "rank", "player_name", "position", "age", "team",
+    "games", "games_started", "minutes_played", "field_goals",
+    "field_goal_attempts", "field_goal_percentage", "three_point_field_goals",
+    "three_point_field_goal_attempts", "three_point_field_goal_percentage",
+    "two_point_field_goals", "two_point_field_goal_attempts",
+    "two_point_field_goal_percentage", "effective_field_goal_percentage",
+    "free_throws", "free_throw_attempts", "free_throw_percentage",
+    "offensive_rebounds", "defensive_rebounds", "total_rebounds",
+    "assists", "steals", "blocks", "turnovers",
+    "personal_fouls", "points", "year"
+  )
+  
+  # Add the data frame to the list
+  nba_players_stats_list[[as.character(year)]] <- nba_players_stats_df
+}
+
+# Combine all the data frames in the list into one data frame
+nba_players_stats_df <- bind_rows(nba_players_stats_list, .id = "year") 
+
+names(nba_players_stats_list) <- paste0("nba_year_",years,"_df")
+
+# list2env(nba_players_stats_list, envir = .GlobalEnv)
+```
+
+### NFL Player Positions Data Scraping
+
+```{r}
+general_stat_info = function(type_info, year){
+  url <- paste0("https://www.pro-football-reference.com/years/",year,"/",type_info,".htm")
+  
+  # Read the HTML content of the webpage
+  webpage <- read_html(url)
+  
+  # Extract the table from the webpage
+  table <- html_node(webpage, "table")
+  
+  # Convert the table to a data frame
+  table_df <- html_table(table)
+  
+  if(type_info == "passing"){
+    colnames(table_df)[c(12,27)] = c("Yds Gained by Passing","Yds Lost due to Sack")
+  }
+  
+  if(type_info %in% c("rushing","defense") ){
+    colnames(table_df) = table_df[1,]
+    colnames(table_df)[c(9,10,16,17)] = c("Yds Gained by Int","Int TD","Yds Gained by FF","FF TD")
+  }
+  
+  
+  # Print the data frame
+  return(table_df)
+}
+```
+
+```{r}
+
+
+# Assuming general_stat_info is a function you've defined to scrape data
+
+# Your existing setup
+years <- 2019:2023
+types <- c("passing", "receiving", "rushing", "defense")
+year_type_df <- expand.grid(year = years, type = types)
+
+# Iterate and gather data
+nfl_stats_list <- map2(year_type_df$year, year_type_df$type, ~ {
+  df <- general_stat_info(.y, .x) # Placeholder for your scraping function
+  
+  # Rename duplicate columns if exist
+  df <- df %>%
+    rename_with(~ if_else(.x %in% c("info_type", "year"), paste0(.x, "_old"), .x))
+  
+  # Add new columns and clean data
+  df <- df %>%
+    mutate(info_type = .y, year = .x) %>%
+    filter(Rk != "Rk") %>%
+    mutate(Player = str_remove_all(Player,"\\*|\\+"))
+  
+  return(df)
+})
+
+# Split the list by type
+nfl_stats_by_type <- split(nfl_stats_list, year_type_df$type)
+
+# Now you have a list of lists, where each top-level list corresponds to a type
+passing_stats_list <- nfl_stats_by_type$passing
+receiving_stats_list <- nfl_stats_by_type$receiving
+rushing_stats_list <- nfl_stats_by_type$rushing
+defense_stats_list <- nfl_stats_by_type$defense
+
+
+passing_stats_df <- bind_rows(passing_stats_list) %>%  
+    mutate(across(where(is.character), ~safe_convert_to_numeric(.x)))
+receiving_stats_df <- bind_rows(receiving_stats_list) %>%  
+    mutate(across(where(is.character), ~safe_convert_to_numeric(.x)))
+rushing_stats_df <- bind_rows(rushing_stats_list) %>%  
+    mutate(across(where(is.character), ~safe_convert_to_numeric(.x)))
+defense_stats_df <- bind_rows(defense_stats_list) %>%  
+    mutate(across(where(is.character), ~safe_convert_to_numeric(.x)))
+```
+
+```{r}
+colnames(passing_stats_df) <- c(
+  "rk", "player", "tm", "age", "pos", "g", "gs", "qbrec", "cmp", "att",
+  "cmp_pct", "yds_gained_by_passing", "td", "td_pct", "int", "int_pct",
+  "first_downs", "success_pct", "longest_pass", "yards_per_attempt",
+  "adjusted_yards_per_attempt", "yards_per_completion", "yards_per_game",
+  "passer_rating", "qbr", "sacks", "yds_lost_due_to_sack", "sack_pct",
+  "net_yards_per_attempt", "adjusted_net_yards_per_attempt", "fourth_quarter_comebacks",
+  "game_winning_drives", "info_type", "year"
+) 
+```
+
+```{r}
+colnames(receiving_stats_df) <- c(
+  "rk", "player", "tm", "age", "pos", "g", "gs", "targets", "receptions", "catch_pct",
+  "yards", "yards_per_reception", "td", "first_downs", "success_pct", "longest_reception",
+  "yards_per_target", "receptions_per_game", "yards_per_game", "fumbles", "info_type", "year"
+)
+```
+
+```{r}
+colnames(rushing_stats_df) <- c(
+  "rk", "player", "tm", "age", "pos", "g", "gs", "attempts", "yards_gained_by_int",
+  "int_td", "first_downs", "success_pct", "longest_run", "yards_per_attempt",
+  "yards_per_game", "yards_gained_by_ff", "info_type", "year"
+)
+```
+
+```{r}
+colnames(defense_stats_df) <- c(
+  "rk", "player", "tm", "age", "pos", "g", "gs", "interceptions", "yards_gained_by_int",
+  "int_td", "longest_int_return", "passes_defended", "forced_fumbles", "fumbles",
+  "fumble_recoveries", "yards_gained_by_ff", "ff_td", "sacks", "combined_tackles",
+  "solo_tackles", "assist_tackles", "tackles_for_loss", "qb_hits", "safeties",
+  "info_type", "year"
+)
+```
+
+```{r}
+
+```
+
