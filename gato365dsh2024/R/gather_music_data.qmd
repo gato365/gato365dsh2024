@@ -1,0 +1,85 @@
+
+
+
+```{r}
+# Load necessary libraries
+library(spotifyr)
+library(tidyverse)
+
+# Set Spotify API credentials
+Sys.setenv(SPOTIFY_CLIENT_ID = '743e9f5e09384c26aa3c57a8885bef21')
+Sys.setenv(SPOTIFY_CLIENT_SECRET = '4c309ba4599b465cb04a0306de9a32fc')
+
+# Authenticate with Spotify API
+access_token <- get_spotify_access_token()
+```
+
+
+```{r}
+# Function to get artist audio features and return as a data frame
+get_artist_data <- function(artist_name) {
+  artist_data <- get_artist_audio_features(artist_name) %>%
+    mutate(artist_name = artist_name) # Add a column with the artist's name
+  
+  return(artist_data)
+}
+
+# Vector of artists
+artists <- c("Taylor Swift", "Beyonce", "Dua Lipa", "Olivia Rodrigo", 
+             "Billie Eilish", "Ariana Grande", "Kendrick Lamar", 
+             "Drake", "Ed Sheeran", "Bruno Mars", "Justin Bieber")
+
+# Use map_df to apply get_artist_data to each artist and row-bind results
+all_artists_df <- map_df(artists, get_artist_data)
+
+```
+
+
+
+Remove Unnecessary columns
+```{r}
+important_variables_artists_df <- all_artists_df %>% 
+  select(artist_name,album_release_date,album_release_year, album_name, danceability,energy
+         , key,loudness,speechiness,acousticness, instrumentalness,liveness,valence, tempo,duration_ms,explicit,track_name,track_number, key, key_mode )
+```
+
+
+```{r}
+# Use map to apply get_artist_data to each artist and store results in a list
+all_artists_data <- map(artists, get_artist_data)
+
+# Select the specific columns you want
+selected_columns <- c("artist_name", "album_release_date", "album_release_year", "album_name", "danceability", "energy", "key", "loudness", "speechiness", "acousticness", "instrumentalness", "liveness", "valence", "tempo", "duration_ms", "explicit", "track_name", "track_number", "key", "key_mode")
+
+# Apply select to each data frame in the list
+all_artists_data <- map(all_artists_data, ~select(.x, all_of(selected_columns)))
+
+# Split the data frames and store each one in the environment
+# Assign names to the list elements
+names(all_artists_data) <- artists %>% 
+  str_to_lower() %>% 
+  str_replace(" ","_") %>% 
+  paste0("_df")
+
+# Now you can split the data frames and store each one in the environment
+list2env(all_artists_data, envir = .GlobalEnv)
+```
+
+
+```{r}
+usethis::use_data(all_artists_df,
+                  ariana_grande_df,
+                  beyonce_df,
+                  billie_eilish_df,
+                  bruno_mars_df,
+                  drake_df,
+                  dua_lipa_df,
+                  ed_sheeran_df,
+                  justin_bieber_df,
+                  kendrick_lamar_df,
+                  olivia_rodrigo_df,
+                  taylor_swift_df,
+         
+         overwrite = TRUE)
+```
+

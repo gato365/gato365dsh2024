@@ -16,7 +16,7 @@ library(dplyr)
 library(stringr)
 library(purrr)
 library(tidyr)
-
+library(usethis)
 ```
 
 ```{r}
@@ -79,7 +79,7 @@ nba_players_stats_df <- bind_rows(nba_players_stats_list, .id = "year")
 
 names(nba_players_stats_list) <- paste0("nba_year_",years,"_df")
 
-# list2env(nba_players_stats_list, envir = .GlobalEnv)
+list2env(nba_players_stats_list, envir = .GlobalEnv)
 ```
 
 ### NFL Player Positions Data Scraping
@@ -198,6 +198,17 @@ colnames(defense_stats_df) <- c(
 ```
 
 ```{r}
-
+use_data(defense_stats_df,
+         nba_players_stats_df,
+         nba_year_2019_df,
+         nba_year_2020_df,
+         nba_year_2021_df,
+         nba_year_2022_df,
+         nba_year_2023_df,
+         passing_stats_df,
+         rushing_stats_df,
+         receiving_stats_df,
+         
+         overwrite = TRUE)
 ```
 
