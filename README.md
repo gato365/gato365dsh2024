@@ -16,10 +16,10 @@ Variables Include:
 ### NFL
 2019 - 2023
 
-Passing
-Receiving
-Rushing
-Defense
+- Passing
+- Receiving
+- Rushing
+- Defense
 
 
 Variables Include:
