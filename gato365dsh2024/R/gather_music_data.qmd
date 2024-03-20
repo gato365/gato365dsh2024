@@ -83,3 +83,15 @@ usethis::use_data(all_artists_df,
          overwrite = TRUE)
 ```
 
+
+
+```{r}
+all_artists_df <- all_artists_df %>% 
+  select(-album_images,-track_id,-analysis_url,-artists,-available_markets, -track_href, -track_preview_url, -track_uri,-external_urls.spotify)
+```
+
+```{r}
+usethis::use_data(all_artists_df,
+         overwrite = TRUE)
+```
+
