@@ -27,7 +27,8 @@ get_artist_data <- function(artist_name) {
 # Vector of artists
 artists <- c("Taylor Swift", "Beyonce", "Dua Lipa", "Olivia Rodrigo", 
              "Billie Eilish", "Ariana Grande", "Kendrick Lamar", 
-             "Drake", "Ed Sheeran", "Bruno Mars", "Justin Bieber")
+             "Drake", "Ed Sheeran", "Bruno Mars", "Justin Bieber", 
+             "Michael Jackson","U2","Jhene Aiko", "Tool","Travis Scott")
 
 # Use map_df to apply get_artist_data to each artist and row-bind results
 all_artists_df <- map_df(artists, get_artist_data)
@@ -38,9 +39,29 @@ all_artists_df <- map_df(artists, get_artist_data)
 
 Remove Unnecessary columns
 ```{r}
+check_word = c("fuck", "bitch", "nigga", "nigger", "hell", "slut", "asshole", "motherfucker", "pussy", "whore", "damn", " shit")
+check_word = paste(check_word, collapse = "|")
 important_variables_artists_df <- all_artists_df %>% 
   select(artist_name,album_release_date,album_release_year, album_name, danceability,energy
-         , key,loudness,speechiness,acousticness, instrumentalness,liveness,valence, tempo,duration_ms,explicit,track_name,track_number, key, key_mode )
+         , key,loudness,speechiness,acousticness, instrumentalness,liveness,valence, tempo,duration_ms,explicit,track_name,track_number, key, key_mode ) %>% 
+  mutate(track_name = as.character(tolower(track_name))) %>%
+  mutate(cursed_word_old = str_detect(track_name, check_word)) %>% 
+  mutate(track_name = str_replace_all(track_name, regex("Slut", ignore_case = TRUE), "S**t")) %>%
+  mutate(track_name = str_replace_all(track_name, regex("Shit", ignore_case = TRUE), "S**t")) %>%
+  mutate(track_name = str_replace_all(track_name, regex("damn", ignore_case = TRUE), "D**n")) %>%
+  mutate(track_name = str_replace_all(track_name, regex("Bitch", ignore_case = TRUE), "B***h")) %>%
+  mutate(track_name = str_replace_all(track_name, regex("Pussy", ignore_case = TRUE), "P***y")) %>%
+  mutate(track_name = str_replace_all(track_name, regex("Fucking", ignore_case = TRUE), "F****g")) %>%
+  mutate(track_name = str_replace_all(track_name, regex("Fuck", ignore_case = TRUE), "F**k")) %>% 
+  mutate(cursed_word_new = str_detect(track_name, check_word)) %>%
+  mutate(album_name = gsub("DAMN", "D**N", album_name)) %>%
+  mutate(album_name = gsub("Pimp", "P**p", album_name))
+
+
+
+
+
+
 ```
 
 
@@ -51,8 +72,15 @@ all_artists_data <- map(artists, get_artist_data)
 # Select the specific columns you want
 selected_columns <- c("artist_name", "album_release_date", "album_release_year", "album_name", "danceability", "energy", "key", "loudness", "speechiness", "acousticness", "instrumentalness", "liveness", "valence", "tempo", "duration_ms", "explicit", "track_name", "track_number", "key", "key_mode")
 
+
+
+
+
 # Apply select to each data frame in the list
 all_artists_data <- map(all_artists_data, ~select(.x, all_of(selected_columns)))
+
+
+
 
 # Split the data frames and store each one in the environment
 # Assign names to the list elements
